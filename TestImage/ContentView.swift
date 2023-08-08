@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreImage
 import CoreGraphics
+import Accelerate
 
 class E2P {
     private let frame: UIImage
@@ -18,6 +19,8 @@ class E2P {
     private let height: Int // Add this property
     private let wFOV: CGFloat // Add this property
     private let hFOV: CGFloat // Add this property
+    
+    
     
     init(originalImage: UIImage, fov: Double) {
         self.frame = originalImage
@@ -30,6 +33,56 @@ class E2P {
         self.hFOV = CGFloat(self.height) / CGFloat(self.width) * wFOV
         // Set other properties and initialization logic here
     }
+
+    private func combinedMatrix() -> [CGPoint] {
+        var points = [CGPoint]()
+        
+        // Примерная логика для заполнения массива точек
+        for row in 0..<height {
+            for col in 0..<width {
+                let x = CGFloat(col) / CGFloat(width) * 2 - 1
+                let y = CGFloat(row) / CGFloat(height) * 2 - 1
+                points.append(CGPoint(x: x, y: y))
+            }
+        }
+        
+        return points
+    }
+
+
+    
+    private func bilinearInterpolationForPointPair(point: CGPoint) -> CGPoint {
+        var x = point.x
+        var y = point.y
+        let combined = self.combinedMatrix()
+        
+        let reshapedMatrix = combined.reshape(height: self.height, width: self.width, channels: 2)
+        
+        let intermediateResults = reshapedMatrix.map { row in
+            row.map { point in
+                pow(point.x, 2) + pow(point.y, 2)
+            }
+        }
+        
+        let sumResults = intermediateResults.map { row in
+            row.reduce(0.0, +)
+        }
+        
+        if let minSum = sumResults.min() {
+            if let resultRow = reshapedMatrix.first(where: { row in
+                row.contains { point in
+                    pow(point.x, 2) + pow(point.y, 2) == minSum
+                }
+            }) {
+                if let resultPoint = resultRow.first {
+                    x = resultPoint.x
+                    y = resultPoint.y
+                }
+            }
+        }
+        
+        return CGPoint(x: x, y: y)
+    }
     
     func to_nfov(theta: Double, phi: Double) -> UIImage? {
         guard let originalCGImage = frame.cgImage else {
@@ -40,45 +93,45 @@ class E2P {
         let equ_w = originalCGImage.width
         let equ_cx = CGFloat((equ_w - 1) / 2)
         let equ_cy = CGFloat((equ_h - 1) / 2)
-        
         let wFOV: CGFloat = CGFloat(self.focus_of_view)
         let hFOV = CGFloat(self.height) / CGFloat(self.width) * wFOV
-        let c_x = CGFloat((self.width - 1) / 2)
-        let c_y = CGFloat((self.height - 1) / 2)
-        let wangle = (180 - wFOV) / 2.0
-        // ... (continue with the rest of the variables)
-
+        
         var outImage: UIImage?
         
         if let context = CGContext(
                 data: nil,
-                width: equ_w,
-                height: equ_h,
+                width: width,
+                height: height,
                 bitsPerComponent: 8,
-                bytesPerRow: 4 * equ_w,
+                bytesPerRow: 4 * width,
                 space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
             ) {
-                context.interpolationQuality = .high
-                
-                for y in 0..<equ_h {
-                    for x in 0..<equ_w {
-                        let lon = Double(x) / Double(equ_w) * 360.0 - 180.0
-                        let lat = -Double(y) / Double(equ_h) * 180.0 + 90.0
-                        
-                        let (r, g, b) = interpolateColor(lon: lon, lat: lat) // Implement this function
-                        
-                        context.setFillColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
-                        context.fill(CGRect(x: x, y: y, width: 1, height: 1))
-                    }
-                }
-                
-                if let cgImage = context.makeImage() {
-                    outImage = UIImage(cgImage: cgImage)
+            context.interpolationQuality = .high
+            
+            for y in 0..<height {
+                for x in 0..<width {
+                    let lon = Double(x) / Double(width) * 360.0 - 180.0
+                    let lat = -Double(y) / Double(height) * 180.0 + 90.0
+                    
+                    // Example usage of equ_cx and equ_cy
+                    let dx = CGFloat(x) - equ_cx
+                    let dy = CGFloat(y) - equ_cy
+                    
+                    let (r, g, b) = interpolateColor(lon: lon, lat: lat)
+                    
+                    context.setFillColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
+                    context.fill(CGRect(x: x, y: y, width: 1, height: 1))
                 }
             }
+            
+            if let cgImage = context.makeImage() {
+                outImage = UIImage(cgImage: cgImage)
+            }
+        }
         return outImage
     }
+
     
     func to_perspective(theta: Double, phi: Double) -> UIImage? {
             guard let originalCGImage = frame.cgImage else {
@@ -192,4 +245,28 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
+extension Array where Element == CGPoint {
+    func reshape(height: Int, width: Int, channels: Int) -> [[CGPoint]] {
+        var reshapedArray = [[CGPoint]]()
+        
+        var currentIndex = 0
+        for _ in 0..<height {
+            var row = [CGPoint]()
+            for _ in 0..<width {
+                row.append(self[currentIndex])
+                currentIndex += channels
+            }
+            reshapedArray.append(row)
+        }
+        
+        return reshapedArray
+    }
+}
+
+
+
+
+
+
 
