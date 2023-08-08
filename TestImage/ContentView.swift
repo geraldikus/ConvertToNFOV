@@ -72,33 +72,29 @@ class E2P {
         var y = point.y
         let combined = self.combinedMatrix()
         
-        let reshapedMatrix = combinedMatrix().reshape(height: self.height, width: self.width, channels: 2)
+        var minSum: CGFloat = CGFloat.greatestFiniteMagnitude
+        var resultPoint: CGPoint?
         
-        let intermediateResults = reshapedMatrix.map { row in
-            row.map { point in
-                pow(point.x, 2) + pow(point.y, 2)
+        for row in 0..<combined.count {
+            for col in 0..<combined[row].count {
+                let p = combined[row][col]
+                let sum = pow(p.x, 2) + pow(p.y, 2)
+                if sum < minSum {
+                    minSum = sum
+                    resultPoint = p
+                }
             }
         }
         
-        let sumResults = intermediateResults.map { row in
-            row.reduce(0.0, +)
-        }
-        
-        if let minSum = sumResults.min() {
-            if let resultRow = reshapedMatrix.first(where: { row in
-                row.contains { point in
-                    pow(point.x, 2) + pow(point.y, 2) == minSum
-                }
-            }) {
-                if let resultPoint = resultRow.first {
-                    x = resultPoint.x
-                    y = resultPoint.y
-                }
-            }
+        if let resultPoint = resultPoint {
+            x = resultPoint.x
+            y = resultPoint.y
         }
         
         return CGPoint(x: x, y: y)
     }
+
+
 
     
     private func bilinearInterpolationMatrix(lon: Double, lat: Double) -> [[CGPoint]] {
