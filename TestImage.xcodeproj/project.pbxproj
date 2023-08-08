@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3A5ECD622A825EF500B9D6FE /* ColorInterpolationTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5ECD612A825EF500B9D6FE /* ColorInterpolationTestView.swift */; };
 		3A79CC1D2A81184A00BC2234 /* TestImageApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A79CC1C2A81184A00BC2234 /* TestImageApp.swift */; };
 		3A79CC1F2A81184A00BC2234 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A79CC1E2A81184A00BC2234 /* ContentView.swift */; };
 		3A79CC212A81184E00BC2234 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3A79CC202A81184E00BC2234 /* Assets.xcassets */; };
@@ -14,6 +15,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3A5ECD612A825EF500B9D6FE /* ColorInterpolationTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorInterpolationTestView.swift; sourceTree = "<group>"; };
 		3A79CC192A81184A00BC2234 /* TestImage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestImage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A79CC1C2A81184A00BC2234 /* TestImageApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestImageApp.swift; sourceTree = "<group>"; };
 		3A79CC1E2A81184A00BC2234 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -53,6 +55,7 @@
 			children = (
 				3A79CC1C2A81184A00BC2234 /* TestImageApp.swift */,
 				3A79CC1E2A81184A00BC2234 /* ContentView.swift */,
+				3A5ECD612A825EF500B9D6FE /* ColorInterpolationTestView.swift */,
 				3A79CC202A81184E00BC2234 /* Assets.xcassets */,
 				3A79CC222A81184E00BC2234 /* Preview Content */,
 			);
@@ -138,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A79CC1F2A81184A00BC2234 /* ContentView.swift in Sources */,
+				3A5ECD622A825EF500B9D6FE /* ColorInterpolationTestView.swift in Sources */,
 				3A79CC1D2A81184A00BC2234 /* TestImageApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import CoreImage
 import CoreGraphics
 import Accelerate
 
@@ -19,21 +18,20 @@ class E2P {
     private let height: Int
     private let wFOV: CGFloat
     private let hFOV: CGFloat
-   
-
-    
+    private lazy var cachedCombinedMatrix: [[CGPoint]] = {
+            return self.combinedMatrix()
+        }()
     
     init(originalImage: UIImage, fov: Double) {
         self.frame = originalImage
         self.equ_w = Int(originalImage.size.width)
         self.equ_h = Int(originalImage.size.height)
         self.focus_of_view = fov
-        self.width = 1400
-        self.height = 1400
+        self.width = 1500
+        self.height = 1000
         self.wFOV = CGFloat(fov) // Set the FOV for wFOV
         self.hFOV = CGFloat(self.height) / CGFloat(self.width) * wFOV
-       
-
+        //self.cachedCombinedMatrix = self.combinedMatrix()
     }
 
     private func combinedMatrix() -> [[CGPoint]] {
@@ -112,23 +110,29 @@ class E2P {
     }
     
     
+//    private func convertOriginalToFOVCoordinates(x: Int, y: Int) -> CGPoint {
+//        guard y >= 0 && y < height && x >= 0 && x < width else {
+//            return .zero
+//        }
+//
+//        //var point = CGPoint(x: CGFloat(x), y: CGFloat(y))
+//        //point = bilinearInterpolationForPointPair(point: point)
+//
+//        var point = CGPoint(x: 0.5, y: 0.5)
+//
+//        let combined = cachedCombinedMatrix
+//
+//        return CGPoint(x: point.x, y: point.y)
+//    }
+    
     private func convertOriginalToFOVCoordinates(x: Int, y: Int) -> CGPoint {
-        guard y >= 0 && y < height && x >= 0 && x < width else {
+        guard y >= 0 && y < equ_h && x >= 0 && x < equ_w else {
             return .zero
         }
         
-        var point = CGPoint(x: CGFloat(x), y: CGFloat(y))
-        point = bilinearInterpolationForPointPair(point: point)
-        
-        print("convertOriginalToFOVCoordinates - Before combinedMatrix()")
-        let combined = combinedMatrix()
-        print("convertOriginalToFOVCoordinates - After combinedMatrix()")
-        
-        return CGPoint(x: point.x, y: point.y)
+        return cachedCombinedMatrix[y][x]
     }
 
-
-    
     func toNFOV(theta: Double, phi: Double) -> UIImage? {
         print("toNFOV: theta = \(theta), phi = \(phi)")
         
@@ -136,14 +140,16 @@ class E2P {
             print("toNFOV: Failed to get CGImage from frame")
             return nil
         }
-        
+
+        print("toNFOV: Starting conversion process...")
+
         let equ_h = originalCGImage.height
         let equ_w = originalCGImage.width
-        let equ_cx = CGFloat((equ_w - 1) / 2)
-        let equ_cy = CGFloat((equ_h - 1) / 2)
-        
+//        let equ_cx = CGFloat((equ_w - 1) / 2)
+//        let equ_cy = CGFloat((equ_h - 1) / 2)
+
         var outImage: UIImage?
-        
+
         if let context = CGContext(
             data: nil,
             width: width,
@@ -154,24 +160,32 @@ class E2P {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) {
             context.interpolationQuality = .high
-            
+
+            print("toNFOV: Starting loop...")
+
             for y in 0..<equ_h {
                 for x in 0..<equ_w {
+                    // Ensure that x and y are within valid ranges
+                    guard x >= 0 && x < equ_w && y >= 0 && y < equ_h else {
+                        print("Invalid x or y values: x = \(x), y = \(y)")
+                        continue
+                    }
+                    
                     let originalCoordinates = convertOriginalToFOVCoordinates(x: x, y: y)
                     let (r, g, b) = interpolateColor(lon: originalCoordinates.x, lat: originalCoordinates.y)
-                    
+
                     context.setFillColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
                     context.fill(CGRect(x: x, y: y, width: 1, height: 1))
                 }
             }
-            
+
             if let cgImage = context.makeImage() {
                 outImage = UIImage(cgImage: cgImage)
             }
         }
+        print("toNFOV: Conversion process completed")
         return outImage
     }
-
     
     func to_perspective(theta: Double, phi: Double) -> UIImage? {
         print("to_perspective: theta = \(theta), phi = \(phi)")
@@ -185,8 +199,9 @@ class E2P {
         let equ_w = originalCGImage.width
         
         // Calculate pFOV and p_hFOV based on width and height
-        let pFOV: CGFloat = CGFloat(self.focus_of_view)
-        let p_hFOV = CGFloat(self.height) / CGFloat(self.width) * pFOV
+        
+       // let pFOV: CGFloat = CGFloat(self.focus_of_view)
+       // let p_hFOV = CGFloat(self.height) / CGFloat(self.width) * pFOV
         
         var outImage: UIImage?
         
@@ -233,15 +248,15 @@ class E2P {
 
 
 
-    func interpolateColor(lon: Double, lat: Double) -> (Double, Double, Double) {
+     func interpolateColor(lon: Double, lat: Double) -> (Double, Double, Double) {
         // Normalize lon and lat to [0, 1] range
         let lonNormalized = (lon + 180.0) / 360.0
         let latNormalized = (lat + 90.0) / 180.0
         
         // Interpolate color components based on normalized lon and lat
-        let red = lonNormalized
-        let green = latNormalized
-        let blue = 0.5
+        let red = pow(1 - lonNormalized, 2)
+        let green = 1.0 - abs(latNormalized - 0.5)
+        let blue = lonNormalized
         
         return (red, green, blue)
     }
@@ -252,7 +267,7 @@ class E2P {
 struct ContentView: View {
     @State private var originalImage: UIImage?
     @State private var nfovImage: UIImage?
-    let imageName = "panorama1" // Replace with your image name
+    let imageName = "ggg"
     
     var body: some View {
         VStack {
@@ -271,11 +286,19 @@ struct ContentView: View {
             Button("Convert to NFOV") {
                 if let originalImage = UIImage(named: imageName) {
                     let e2p = E2P(originalImage: originalImage, fov: 120)
-                    nfovImage = e2p.toNFOV(theta: 0, phi: 0)
+                    DispatchQueue.global(qos: .background).async {
+                        if let nfovResult = e2p.toNFOV(theta: 0, phi: 0) {
+                            DispatchQueue.main.async {
+                                nfovImage = nfovResult
+                            }
+                        }
+                    }
                 } else {
-                    print("somethin wrong")
+                    print("something wrong")
                 }
             }
+
+
             Button("Convert to Perspective") {
                 if let originalImage = UIImage(named: imageName) {
                     let e2p = E2P(originalImage: originalImage, fov: 120) // Set the desired FOV
