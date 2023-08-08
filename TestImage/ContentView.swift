@@ -34,16 +34,32 @@ class E2P {
         // Set other properties and initialization logic here
     }
 
-    private func combinedMatrix() -> [CGPoint] {
-        var points = [CGPoint]()
+//    private func combinedMatrix() -> [CGPoint] {
+//        var points = [CGPoint]()
+//
+//        // Примерная логика для заполнения массива точек
+//        for row in 0..<height {
+//            for col in 0..<width {
+//                let x = CGFloat(col) / CGFloat(width) * 2 - 1
+//                let y = CGFloat(row) / CGFloat(height) * 2 - 1
+//                points.append(CGPoint(x: x, y: y))
+//            }
+//        }
+//
+//        return points
+//    }
+
+    private func combinedMatrix() -> [[CGPoint]] {
+        var points = [[CGPoint]]()
         
-        // Примерная логика для заполнения массива точек
         for row in 0..<height {
+            var rowPoints = [CGPoint]()
             for col in 0..<width {
                 let x = CGFloat(col) / CGFloat(width) * 2 - 1
                 let y = CGFloat(row) / CGFloat(height) * 2 - 1
-                points.append(CGPoint(x: x, y: y))
+                rowPoints.append(CGPoint(x: x, y: y))
             }
+            points.append(rowPoints)
         }
         
         return points
@@ -56,7 +72,7 @@ class E2P {
         var y = point.y
         let combined = self.combinedMatrix()
         
-        let reshapedMatrix = combined.reshape(height: self.height, width: self.width, channels: 2)
+        let reshapedMatrix = combinedMatrix().reshape(height: self.height, width: self.width, channels: 2)
         
         let intermediateResults = reshapedMatrix.map { row in
             row.map { point in
@@ -83,6 +99,38 @@ class E2P {
         
         return CGPoint(x: x, y: y)
     }
+
+    
+    private func bilinearInterpolationMatrix(lon: Double, lat: Double) -> [[CGPoint]] {
+        let ufXCoords = lon
+        let vfYCoords = lat
+        
+        var xxDense = [CGFloat](repeating: 0.0, count: width * height)
+        var yyDense = [CGFloat](repeating: 0.0, count: width * height)
+        
+        var combinedMatrix = [[CGPoint]](repeating: [CGPoint](repeating: CGPoint.zero, count: width), count: height)
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = y * width + x
+                
+                xxDense[index] = CGFloat(ufXCoords)
+                yyDense[index] = CGFloat(vfYCoords)
+                
+                combinedMatrix[y][x] = CGPoint(x: xxDense[index], y: yyDense[index])
+            }
+        }
+        
+        return combinedMatrix
+    }
+
+    private func convertFOVToOriginalCoordinates(x: Int, y: Int) -> CGPoint {
+        guard y >= 0 && y < height && x >= 0 && x < width else {
+            return .zero // Handle out-of-bounds indices
+        }
+        return combinedMatrix()[y][x]
+    }
+
     
     func to_nfov(theta: Double, phi: Double) -> UIImage? {
         guard let originalCGImage = frame.cgImage else {
